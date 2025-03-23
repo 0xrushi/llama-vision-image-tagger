@@ -82,6 +82,23 @@ This project has an accompanying blog post [here](https://medium.com/design-boot
 
     When new images are added to the folder, you can click the "Refresh" button to rescan the folder and update the image list.
 
+## Dockerized Usage
+
+1. **Run the application using Docker Compose:**
+
+    ```bash
+    docker compose up --build
+    ```
+
+    This will start the server on `http://127.0.0.1:8000`.
+
+2. **Run Ollama using Docker:**
+
+    ```bash
+    docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+    docker exec -it ollama ollama run llama3.2-vision:latest
+    ```
+
 ## Project Structure
 
 -   `main.py`: Contains the FastAPI backend logic, including API endpoints for image processing, searching, and serving static files.

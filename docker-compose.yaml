@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      # - "11435:11435"
+    volumes:
+      - "D:/dogee\ 2103/DCIM/temp:/mnt"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
