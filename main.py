@@ -49,6 +49,10 @@ class UpdateImageMetadata(BaseModel):
     tags: Optional[List[str]] = None
     text_content: Optional[str] = None
 
+class DeleteImagesRequest(BaseModel):
+    paths: List[str]
+
+
 def get_supported_extensions() -> Set[str]:
     """Return a set of supported image file extensions."""
     return {'.jpg', '.jpeg', '.png', '.webp'}
@@ -339,6 +343,56 @@ async def check_init_status():
     except Exception as e:
         logger.error(f"Error checking init status: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/delete-images")
+async def delete_images(request: DeleteImagesRequest):
+    if not hasattr(app, 'current_folder') or not hasattr(app, 'vector_store'):
+        raise HTTPException(status_code=400, detail="No folder selected")
+
+    folder_path = Path(app.current_folder)
+    metadata_file = folder_path / "image_metadata.json"
+
+    if not metadata_file.exists():
+        raise HTTPException(status_code=400, detail="Metadata file not found")
+
+    try:
+        # Load metadata
+        with open(metadata_file, "r") as f:
+            metadata = json.load(f)
+
+        deleted_paths = []
+
+        for rel_path in request.paths:
+            image_path = folder_path / rel_path
+
+            # Delete image file
+            if image_path.exists():
+                try:
+                    image_path.unlink()
+                    logger.info(f"Deleted image file: {image_path}")
+                    deleted_paths.append(rel_path)
+                except Exception as e:
+                    logger.warning(f"Failed to delete image file {image_path}: {e}")
+            else:
+                logger.warning(f"File not found for deletion: {image_path}")
+
+            # Remove from metadata
+            if rel_path in metadata:
+                del metadata[rel_path]
+
+            # Remove from vector store
+            app.vector_store.delete_image(rel_path)
+
+        # Save updated metadata
+        with open(metadata_file, "w") as f:
+            json.dump(metadata, f, indent=4)
+
+        return {"deleted": deleted_paths, "count": len(deleted_paths)}
+
+    except Exception as e:
+        logger.error(f"Error deleting images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting images: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
